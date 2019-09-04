@@ -1,4 +1,5 @@
-""" Questão 1: Naive Bayes:
+""" 
+Questão 1: Naive Bayes:
 Teorema: P(Class | X) = P(X | Class) * P(Class)/P(X)
 P(Class) = Number of class (target) / Total Observations
 P(X) = Number of Similar Observations / Total Observations
@@ -14,9 +15,16 @@ dataset = pd.read_csv('class01.csv')
 X = dataset.iloc[:, 0:100].values
 y = dataset.iloc[:, -1].values
 
+####################################################
+####################################################
+####################################################
 """
 Holdout: 35 - 75 
 """
+####################################################
+####################################################
+####################################################
+
 # Split dataset into train and test sets
 # 35% para treino e 75% para teste
 from sklearn.model_selection import train_test_split
@@ -48,11 +56,20 @@ print("Accuracy:")
 print("Train Set: ", acc_train, "%")
 print("Test Set: ", acc_test, "%")
 
+####################################################
+####################################################
+####################################################
 """
 Leave One Out 
 """
+####################################################
+####################################################
+####################################################
+
 # Split dataset into train and test sets using LeaveOneOut approach
+from sklearn.model_selection import LeaveOneOut
 loo = LeaveOneOut()
+
 acc_train_sum = 0
 acc_test_sum = 0
 counter = 0

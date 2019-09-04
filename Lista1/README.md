@@ -4,4 +4,4 @@
 
 # Run Question file
 
-> python3 Qx.py
+> cd Qx && python3 qx.py
