@@ -225,6 +225,7 @@ def init_game(player_pos, algs):
 def is_goal_state(player_pos):
     return squares[player_pos[0]][player_pos[1]] == "goal"
 
+drag_draw = False
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT: sys.exit()
@@ -262,8 +263,15 @@ while True:
 
         elif event.type == pygame.KEYDOWN:
             player_pos = move_player_key(event.key, player_pos)
+        
+        elif event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+            drag_draw = not drag_draw
 
-
+    if drag_draw:
+        x, y = pygame.mouse.get_pos()
+        x, y = x // square_size, y // square_size
+        squares[x][y] = "wall"
+         
     if started:
         started, d_pos, b_pos = exec_movements(positions_d, positions_b, d_pos, b_pos)
 
