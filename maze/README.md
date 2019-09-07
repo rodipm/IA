@@ -5,18 +5,22 @@ A basic maze implementation in pyGame made for IA algorithms training and testin
 Basic commands:
 
 1. Install Requirements
-> pip3 install pygame
+> pip3 install -U pygame
 
-May require pip3 upgrade
+May require pip3 upgrade:
+> python3 -m pip install --upgrade pip
 
 2. Run Game:
 > python3 game.py
 
 3. In Game Options:
-	a. Arrows to move starting position
-	b. Mouse1 to place a wall (Mouse1 over a wall to remove)
-	c. Mouse2 to place a target
-	d. "d" to perform a depth-first-search
-	e. "b" to perform a bredth-first-search
-	f. "a" to perform all algorithms
-	g. "r" to restart
+	+ Arrows to move starting position
+	+ Mouse1 to place a wall (Mouse1 over a wall to remove)
+	+ Mouse2 to place a target
+	+ 'Space' to toggle wall drawing mode
+	+ 'd' to perform a depth-first-search
+	+ 'b' to perform a bredth-first-search
+	+ 'a' to perform all algorithms
+	+ 'r' to restart game (keep blocks)
+	+ 'R' to restart all
+	+ 'g' to auto generate maze (prims algorithm)

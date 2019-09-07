@@ -1,7 +1,9 @@
-import sys, pygame
+import sys
+import pygame
+import random
 pygame.init()
 
-size = width, height = 400, 400
+size = width, height = 800, 800
 screen = pygame.display.set_mode(size)
 
 
@@ -13,8 +15,11 @@ blue = (0, 0, 255)
 purple = (255, 0, 200)
 yellow = (255, 255, 0)
 
-square_size = width//20
-squares = [[0 for x in range(0, width, square_size)] for y in range(0, height, square_size)] 
+num_squares = 30
+square_size = width//num_squares
+squares = [[0 for x in range(0, width, square_size)]
+           for y in range(0, height, square_size)]
+
 saved_squares = squares
 
 player_pos = (0, 0)
@@ -30,13 +35,14 @@ algs = []
 tick_counter = 0
 started = False
 
+
 def get_possible_moves(current_pos):
     possible_moves = []
 
     x, y = current_pos
     max_x, max_y = width//square_size, height//square_size
 
-    #check UP, RIGHT, DOWN, LEFT
+    # check UP, RIGHT, DOWN, LEFT
     if y - 1 >= 0 and squares[x][y-1] != "wall":
         possible_moves.append(((x, y-1), pygame.K_UP))
     if y + 1 < max_y and squares[x][y+1] != "wall":
@@ -47,6 +53,7 @@ def get_possible_moves(current_pos):
         possible_moves.append(((x+1, y), pygame.K_RIGHT))
 
     return possible_moves
+
 
 def move_player_key(key, player_pos):
     x, y = player_pos
@@ -61,20 +68,22 @@ def move_player_key(key, player_pos):
 
     # check if it is a possible move
     moves = [pos for pos, action in get_possible_moves(player_pos)]
-    if (x, y) in moves: 
+    if (x, y) in moves:
         return (x, y)
     return player_pos
+
 
 def move_player_to(new_pos):
     global player_pos
     if new_pos in get_possible_moves(player_pos):
         player_pos = new_pos
 
+
 class Stack:
     def __init__(self):
         self.list = []
 
-    def push(self,item):
+    def push(self, item):
         "Push 'item' onto the stack"
         self.list.append(item)
 
@@ -86,14 +95,16 @@ class Stack:
         "Returns true if the stack is empty"
         return len(self.list) == 0
 
+
 class Queue:
     "A container with a first-in-first-out (FIFO) queuing policy."
+
     def __init__(self):
         self.list = []
 
-    def push(self,item):
+    def push(self, item):
         "Enqueue the 'item' into the queue"
-        self.list.insert(0,item)
+        self.list.insert(0, item)
 
     def pop(self):
         """
@@ -106,6 +117,7 @@ class Queue:
         "Returns true if the queue is empty"
         return len(self.list) == 0
 
+
 class PriorityQueue:
     """
       Implements a priority queue data structure. Each inserted item
@@ -113,7 +125,8 @@ class PriorityQueue:
       in quick retrieval of the lowest-priority item in the queue. This
       data structure allows O(1) access to the lowest-priority item.
     """
-    def  __init__(self):
+
+    def __init__(self):
         self.heap = []
         self.count = 0
 
@@ -143,7 +156,8 @@ class PriorityQueue:
                 break
         else:
             self.push(item, priority)
-            
+
+
 def depth_first_search(startState):
 
     if is_goal_state(startState):
@@ -151,7 +165,7 @@ def depth_first_search(startState):
 
     visitedStates, stack = [], Stack()
 
-    stack.push((startState, [])) #(estado, acoes)
+    stack.push((startState, []))  # (estado, acoes)
 
     while not stack.isEmpty():
         currentState, actions = stack.pop()
@@ -174,7 +188,7 @@ def bredth_first_search(startState):
 
     visitedStates, queue = [], Queue()
 
-    queue.push((startState, [])) #(estado, acoes)
+    queue.push((startState, []))  # (estado, acoes)
 
     while not queue.isEmpty():
         currentState, actions = queue.pop()
@@ -190,6 +204,7 @@ def bredth_first_search(startState):
                 newActions = actions + [action]
                 queue.push((nextState, newActions))
 
+
 def restart_game():
     global tick_counter, started, algs, d_pos, b_pos, squares, saved_squares
     tick_counter = 0
@@ -198,7 +213,21 @@ def restart_game():
     d_pos = (-1, -1)
     b_pos = (-1, -1)
     squares = saved_squares
-    
+
+
+def restart_all():
+    global tick_counter, started, algs, d_pos, b_pos, squares, saved_squares, player_pos
+    tick_counter = 0
+    started = False
+    algs = []
+    d_pos = (-1, -1)
+    b_pos = (-1, -1)
+    player_pos = 0, 0
+    squares = [[0 for x in range(0, width, square_size)]
+               for y in range(0, height, square_size)]
+
+
+
 def exec_movements(positions_d, positions_b, d_pos, b_pos):
     global tick_counter
     pygame.time.wait(500)
@@ -213,6 +242,7 @@ def exec_movements(positions_d, positions_b, d_pos, b_pos):
     tick_counter = tick_counter + 1
     return True, d_pos, b_pos
 
+
 def init_game(player_pos, algs):
     global started, saved_squares, d_pos, b_pos
     started = True
@@ -220,15 +250,79 @@ def init_game(player_pos, algs):
     if "d" in algs:
         d_pos = player_pos
     if "b" in algs:
-        b_pos = player_pos    
+        b_pos = player_pos
+
 
 def is_goal_state(player_pos):
     return squares[player_pos[0]][player_pos[1]] == "goal"
 
+
+def get_frontier_cells(grid, position):
+    x, y = position
+    max_x = len(grid)
+    max_y = len(grid[0])
+
+    possible_moves = []
+
+    if x - 1 > -1:
+        possible_moves.append((x-1, y))
+    if x + 1 < max_x:
+        possible_moves.append((x+1, y))
+    if y - 1 > -1:
+        possible_moves.append((x, y-1))
+    if y + 1 < max_y:
+        possible_moves.append((x, y+1))
+
+    return possible_moves
+
+
+# generate maze function
+def generate_maze(grid, start):
+
+    for x in range(len(grid)):
+        for y in range(len(grid[0])):
+            grid[x][y] = "wall"
+
+    path = set()
+    visited_blocks = set()
+
+    start_x, start_y = start
+    grid[start_x][start_y] = 0
+    path.add(start)
+
+    while len(path):
+        # for i in range(100):
+        cell = random.choice(list(path))
+        visited_blocks.add(cell)
+        path.remove(cell)
+        neighbors = []
+
+        # get frontier cells
+        for fc in get_frontier_cells(grid, cell):
+            x, y = fc
+            if fc not in visited_blocks and grid[x][y] == "wall":
+                neighbors.append(fc)
+
+        if(len(neighbors)):
+            random_neighbor = random.choice(neighbors)
+            neighbors.remove(random_neighbor)
+
+            x, y = random_neighbor
+            grid[x][y] = 0
+            path.add(random_neighbor)
+            # visited_blocks.add(random_neighbor)
+
+        for n in neighbors:
+            path.add(n)
+
+    return grid
+
+
 drag_draw = False
 while True:
     for event in pygame.event.get():
-        if event.type == pygame.QUIT: sys.exit()
+        if event.type == pygame.QUIT:
+            sys.exit()
 
         elif event.type == pygame.MOUSEBUTTONUP:
             pos = pygame.mouse.get_pos()
@@ -250,20 +344,26 @@ while True:
             algs.append("d")
             init_game(player_pos, algs)
 
-        
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_a:
             positions_d = depth_first_search(player_pos)
             positions_b = bredth_first_search(player_pos)
             algs.append("b")
             algs.append("d")
             init_game(player_pos, algs)
-        
+
+        elif event.type == pygame.KEYDOWN and event.mod & pygame.KMOD_LSHIFT:
+            restart_all()
+
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
             restart_game()
 
+
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_g:
+            squares = generate_maze(squares, player_pos)
+
         elif event.type == pygame.KEYDOWN:
             player_pos = move_player_key(event.key, player_pos)
-        
+
         elif event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
             drag_draw = not drag_draw
 
@@ -271,9 +371,10 @@ while True:
         x, y = pygame.mouse.get_pos()
         x, y = x // square_size, y // square_size
         squares[x][y] = "wall"
-         
+
     if started:
-        started, d_pos, b_pos = exec_movements(positions_d, positions_b, d_pos, b_pos)
+        started, d_pos, b_pos = exec_movements(
+            positions_d, positions_b, d_pos, b_pos)
 
     if is_goal_state(d_pos) and is_goal_state(b_pos):
         restart_game()
@@ -295,6 +396,7 @@ while True:
                 color = purple
             elif (x, y) == b_pos:
                 color = yellow
-            pygame.draw.rect(screen, color, (col, row, square_size-1, square_size-1))
+            pygame.draw.rect(
+                screen, color, (col, row, square_size-1, square_size-1))
 
     pygame.display.flip()
