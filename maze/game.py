@@ -1,21 +1,29 @@
 import sys
 import pygame
 import random
+import numpy as np
 pygame.init()
 
-size = width, height = 800, 800
-screen = pygame.display.set_mode(size)
+width = height = 800
+menu_height = 100
+size = width, height  + menu_height
 
+screen = pygame.display.set_mode(size)
+pygame.display.set_caption("Maze - AI PLayground")
 
 black = (0, 0, 0)
-white = (255, 255, 255)
+white = (100, 100, 100)
 red = (255, 0, 0)
 green = (0, 255, 0)
 blue = (0, 0, 255)
 purple = (255, 0, 200)
 yellow = (255, 255, 0)
+orange = (255, 127, 80)
 
-num_squares = 30
+font = pygame.font.Font(None, 30)
+
+
+num_squares = 20
 square_size = width//num_squares
 squares = [[0 for x in range(0, width, square_size)]
            for y in range(0, height, square_size)]
@@ -26,14 +34,107 @@ player_pos = (0, 0)
 
 b_pos = (-1, -1)
 d_pos = (-1, -1)
+q_pos = (-1, -1)
 
 positions_d = []
 positions_b = []
+positions_q = []
 
 algs = []
 
 tick_counter = 0
 started = False
+
+
+def Q_learning(initial_state):
+    EPISODES = 5000
+    LEARNING_RATE = 0.1
+    DISCOUNT = 0.95
+
+    SIZE = [width//num_squares, height//num_squares]
+    NUMBER_OF_POSSIBLE_ACTIONS = 4  # up down left right
+
+    epsilon = 1  # not a constant, qoing to be decayed
+    START_EPSILON_DECAYING = 1
+    END_EPSILON_DECAYING = EPISODES//2
+    epsilon_decay_value = epsilon / \
+        (END_EPSILON_DECAYING - START_EPSILON_DECAYING)
+
+    # q_table size =
+    q_table = np.zeros(SIZE + [NUMBER_OF_POSSIBLE_ACTIONS])
+
+    for episode in range(EPISODES):
+        state = initial_state
+
+        done = False
+
+        while not done:
+
+            if np.random.random() > epsilon:
+                # Get action from Q table
+                action = np.argmax(q_table[state])
+            else:
+                # Get random action
+                action = np.random.randint(0, NUMBER_OF_POSSIBLE_ACTIONS)
+
+            # get new states
+            keys = [pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT]
+            action_key = keys[action]
+            new_state = move_player_key(action_key, state)
+            reward = get_new_state_reward(new_state)
+            done = is_goal_state(new_state)
+
+            # If simulation did not end yet after last step - update Q table
+            if not done:
+
+                # Maximum possible Q value in next step (for new state)
+                max_future_q = np.max(q_table[new_state])
+
+                # Current Q value (for current state and performed action)
+                current_q = q_table[state + (action,)]
+
+                # And here's our equation for a new Q value for current state and action
+                new_q = (1 - LEARNING_RATE) * current_q + \
+                    LEARNING_RATE * (reward + DISCOUNT * max_future_q)
+
+                # Update Q table with new Q value
+                q_table[state + (action,)] = new_q
+
+            # Simulation ended (for any reson) - if goal position is achived - update Q value with reward directly
+            elif is_goal_state(new_state):
+                q_table[state + (action,)] = 0
+
+            state = new_state
+
+        # Decaying is being done every episode if episode number is within decaying range
+        if END_EPSILON_DECAYING >= episode >= START_EPSILON_DECAYING:
+            epsilon -= epsilon_decay_value
+
+    #done training
+    #now out q_table is prepared to generate good moves
+    actions = []
+
+    found = False
+    state = initial_state
+
+    while not found:
+        action = np.argmax(q_table[state])
+
+        keys = [pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT]
+        action_key = keys[action]
+        actions.append(action_key)
+
+        new_state = move_player_key(action_key, state)
+        found = is_goal_state(new_state)
+        state = new_state
+    print("Done!", actions)
+    return actions
+
+def get_new_state_reward(new_state):
+    if is_goal_state(new_state):
+        return 10
+    else:
+        return -1
 
 
 def get_possible_moves(current_pos):
@@ -206,51 +307,62 @@ def bredth_first_search(startState):
 
 
 def restart_game():
-    global tick_counter, started, algs, d_pos, b_pos, squares, saved_squares
+    global tick_counter, started, algs, d_pos, b_pos, q_pos, squares, saved_squares, positions_b, positions_d, positions_q
     tick_counter = 0
     started = False
     algs = []
     d_pos = (-1, -1)
     b_pos = (-1, -1)
+    q_pos = (-1, -1)
     squares = saved_squares
+    positions_b = []
+    positions_d = []
+    positions_q = []
 
 
 def restart_all():
-    global tick_counter, started, algs, d_pos, b_pos, squares, saved_squares, player_pos
+    global tick_counter, started, algs, d_pos, b_pos, q_pos, squares, saved_squares, player_pos, positions_b, positions_d, positions_q
     tick_counter = 0
     started = False
     algs = []
     d_pos = (-1, -1)
     b_pos = (-1, -1)
+    q_pos = (-1, -1)
     player_pos = 0, 0
-    squares = [[0 for x in range(0, width, square_size)]
-               for y in range(0, height, square_size)]
+    positions_b = []
+    positions_d = []
+    positions_q = []
+    squares = [[0 for x in range(0, width, square_size)] for y in range(0, height, square_size)]
 
 
 
-def exec_movements(positions_d, positions_b, d_pos, b_pos):
+def exec_movements(positions_d, positions_b, positions_q, d_pos, b_pos, q_pos):
     global tick_counter
     pygame.time.wait(500)
 
-    if tick_counter >= len(positions_d) and tick_counter >= len(positions_b):
-        return False, d_pos, b_pos
+    if tick_counter >= len(positions_d) and tick_counter >= len(positions_b) and tick_counter >= len(positions_q):
+        return False, d_pos, b_pos, q_pos
 
     if tick_counter < len(positions_d):
         d_pos = move_player_key(positions_d[tick_counter], d_pos)
     if tick_counter < len(positions_b):
         b_pos = move_player_key(positions_b[tick_counter], b_pos)
+    if tick_counter < len(positions_q):
+        q_pos = move_player_key(positions_q[tick_counter], q_pos)
     tick_counter = tick_counter + 1
-    return True, d_pos, b_pos
+    return True, d_pos, b_pos, q_pos
 
 
 def init_game(player_pos, algs):
-    global started, saved_squares, d_pos, b_pos
+    global started, saved_squares, d_pos, b_pos, q_pos
     started = True
     saved_squares = squares
     if "d" in algs:
         d_pos = player_pos
     if "b" in algs:
         b_pos = player_pos
+    if "q" in algs:
+        q_pos = player_pos
 
 
 def is_goal_state(player_pos):
@@ -344,14 +456,21 @@ while True:
             algs.append("d")
             init_game(player_pos, algs)
 
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+            positions_q = Q_learning(player_pos)
+            algs.append("q")
+            init_game(player_pos, algs)
+
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_a:
             positions_d = depth_first_search(player_pos)
             positions_b = bredth_first_search(player_pos)
+            positions_q = Q_learning(player_pos)
             algs.append("b")
             algs.append("d")
+            algs.append("q")
             init_game(player_pos, algs)
 
-        elif event.type == pygame.KEYDOWN and event.mod & pygame.KMOD_LSHIFT:
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_r and event.mod & pygame.KMOD_LSHIFT:
             restart_all()
 
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
@@ -373,10 +492,16 @@ while True:
         squares[x][y] = "wall"
 
     if started:
-        started, d_pos, b_pos = exec_movements(
-            positions_d, positions_b, d_pos, b_pos)
+        started, new_d_pos, new_b_pos, new_q_pos = exec_movements(positions_d, positions_b, positions_q, d_pos, b_pos, q_pos)
+        if "d" in algs:
+            d_pos = new_d_pos
+        if "b" in algs:
+            b_pos = new_b_pos
+        if "q" in algs:
+            q_pos = new_q_pos
+            
 
-    if is_goal_state(d_pos) and is_goal_state(b_pos):
+    if (is_goal_state(d_pos) and "d" in algs) and (is_goal_state(b_pos) and "b" in algs) and (is_goal_state(q_pos) and "q" in algs):
         restart_game()
 
     screen.fill(white)
@@ -392,11 +517,20 @@ while True:
                 color = green
             elif (x, y) == player_pos:
                 color = blue
-            elif (x, y) == d_pos:
+            elif (x, y) == d_pos and "d" in algs:
                 color = purple
-            elif (x, y) == b_pos:
+            elif (x, y) == b_pos and "b" in algs:
                 color = yellow
-            pygame.draw.rect(
-                screen, color, (col, row, square_size-1, square_size-1))
+            elif (x, y) == q_pos and "q" in algs:
+                color = orange
+            pygame.draw.rect(screen, color, (col, row, square_size-1, square_size-1))
+
+    text1 = font.render('Depth First Search (d)', True, purple)
+    text2 = font.render('Breadth First Search (b)', True, yellow)
+    text3 = font.render('Q-Learning (q)', True, orange)
+
+    screen.blit(text1, (0, height +  (menu_height // 2)))
+    screen.blit(text2, (300, height + (menu_height // 2)))
+    screen.blit(text3, (600, height + (menu_height // 2)))
 
     pygame.display.flip()

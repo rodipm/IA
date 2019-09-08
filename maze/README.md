@@ -20,6 +20,7 @@ May require pip3 upgrade:
 	+ 'Space' to toggle wall drawing mode
 	+ 'd' to perform a depth-first-search
 	+ 'b' to perform a bredth-first-search
+	+ 'q' To perform train a Q-Learning model and then apply this model
 	+ 'a' to perform all algorithms
 	+ 'r' to restart game (keep blocks)
 	+ 'R' to restart all
