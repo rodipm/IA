@@ -7,6 +7,8 @@ Basic commands:
 1. Install Requirements
 > pip3 install -U pygame
 
+> pip3 install -U numpy
+
 May require pip3 upgrade:
 > python3 -m pip install --upgrade pip
 
@@ -24,4 +26,4 @@ May require pip3 upgrade:
 	+ 'a' to perform all algorithms
 	+ 'r' to restart game (keep blocks)
 	+ 'R' to restart all
-	+ 'g' to auto generate maze (prims algorithm)
+	+ 'g' to auto generate maze (using Prim's algorithm)
