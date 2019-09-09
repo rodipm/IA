@@ -2,6 +2,8 @@ import sys
 import pygame
 import random
 import numpy as np
+import heapq
+
 pygame.init()
 
 width = height = 800
@@ -19,6 +21,7 @@ blue = (0, 0, 255)
 purple = (255, 0, 200)
 yellow = (255, 255, 0)
 orange = (255, 127, 80)
+brown = (84, 1, 15)
 
 font = pygame.font.Font(None, 30)
 
@@ -31,13 +34,16 @@ squares = [[0 for x in range(0, width, square_size)]
 saved_squares = squares
 
 player_pos = (0, 0)
+goal_pos = (-1, -1)
 
 b_pos = (-1, -1)
 d_pos = (-1, -1)
+aStar_pos = (-1, -1)
 q_pos = (-1, -1)
 
 positions_d = []
 positions_b = []
+positions_aStar = []
 positions_q = []
 
 algs = []
@@ -127,8 +133,11 @@ def Q_learning(initial_state):
         new_state = move_player_key(action_key, state)
         found = is_goal_state(new_state)
         state = new_state
-    print("Done!", actions)
+    print("Q-Learning Done!")
     return actions
+
+def manhattan_distance(player_pos, goal_pos):
+    return abs(player_pos[0] - goal_pos[0]) + abs(player_pos[1] - goal_pos[1])
 
 def get_new_state_reward(new_state):
     if is_goal_state(new_state):
@@ -155,6 +164,21 @@ def get_possible_moves(current_pos):
 
     return possible_moves
 
+
+def get_possible_moves_with_costs(current_pos):
+    possible_moves = get_possible_moves(current_pos)
+    costs = []
+    for next_state, _ in possible_moves:
+        if is_goal_state(next_state):
+            costs.append(10)
+        else:
+            costs.append(1)
+    
+    possible_moves_costs = []
+    for i, move in enumerate(possible_moves):
+        possible_moves_costs.append(move + (costs[i], ))
+
+    return possible_moves_costs
 
 def move_player_key(key, player_pos):
     x, y = player_pos
@@ -218,6 +242,44 @@ class Queue:
         "Returns true if the queue is empty"
         return len(self.list) == 0
 
+class PriorityQueue:
+    """
+      Implements a priority queue data structure. Each inserted item
+      has a priority associated with it and the client is usually interested
+      in quick retrieval of the lowest-priority item in the queue. This
+      data structure allows O(1) access to the lowest-priority item.
+    """
+    def  __init__(self):
+        self.heap = []
+        self.count = 0
+
+    def push(self, item, priority):
+        entry = (priority, self.count, item)
+        heapq.heappush(self.heap, entry)
+        self.count += 1
+
+    def pop(self):
+        (_, _, item) = heapq.heappop(self.heap)
+        return item
+
+    def isEmpty(self):
+        return len(self.heap) == 0
+
+    def update(self, item, priority):
+        # If item already in priority queue with higher priority, update its priority and rebuild the heap.
+        # If item already in priority queue with equal or lower priority, do nothing.
+        # If item not in priority queue, do the same thing as self.push.
+        for index, (p, c, i) in enumerate(self.heap):
+            if i == item:
+                if p <= priority:
+                    break
+                del self.heap[index]
+                self.heap.append((priority, c, item))
+                heapq.heapify(self.heap)
+                break
+        else:
+            self.push(item, priority)
+
 
 def depth_first_search(startState):
 
@@ -244,7 +306,7 @@ def depth_first_search(startState):
 
 
 def bredth_first_search(startState):
-    if squares[startState[0]][startState[1]] == "goal":
+    if is_goal_state(startState):
         return []
 
     visitedStates, queue = [], Queue()
@@ -266,55 +328,86 @@ def bredth_first_search(startState):
                 queue.push((nextState, newActions))
 
 
+def a_star_search(startState):
+
+    if is_goal_state(startState):
+        return []
+
+    visitedStates, queue = [], PriorityQueue()
+
+    queue.push((startState, [], 0), 0)
+
+    while not queue.isEmpty():
+      currentState, actions, currentCost = queue.pop()
+
+      if currentState not in visitedStates:
+        visitedStates.append(currentState)
+
+        if is_goal_state(currentState):
+          return actions
+
+        successors = get_possible_moves_with_costs(currentState)
+        for next_state, action, cost in successors:
+          new_actions = actions + [action]
+          new_cost = currentCost + cost
+          heuristic_cost = new_cost + manhattan_distance(next_state, goal_pos) #heuristic(nextState, problem)
+          queue.push((next_state, new_actions, new_cost), heuristic_cost)
+
 def restart_game():
-    global tick_counter, started, algs, d_pos, b_pos, q_pos, squares, saved_squares, positions_b, positions_d, positions_q
+    global tick_counter, started, algs, d_pos, b_pos, aStar_pos, q_pos, squares, saved_squares, positions_b, positions_d, positions_q, positions_aStar
     tick_counter = 0
     started = False
     algs = []
     d_pos = (-1, -1)
     b_pos = (-1, -1)
+    aStar_pos = (-1, -1)
     q_pos = (-1, -1)
     squares = saved_squares
     positions_b = []
     positions_d = []
+    positions_aStar = []
     positions_q = []
 
 
 def restart_all():
-    global tick_counter, started, algs, d_pos, b_pos, q_pos, squares, saved_squares, player_pos, positions_b, positions_d, positions_q
+    global tick_counter, started, algs, d_pos, b_pos, q_pos, squares, saved_squares, player_pos, positions_b, positions_d, positions_q, positions_aStar
     tick_counter = 0
     started = False
     algs = []
     d_pos = (-1, -1)
     b_pos = (-1, -1)
+    aStar_pos = (-1, -1)
     q_pos = (-1, -1)
     player_pos = 0, 0
     positions_b = []
     positions_d = []
+    positions_aStar = []
     positions_q = []
     squares = [[0 for x in range(0, width, square_size)] for y in range(0, height, square_size)]
 
 
 
-def exec_movements(positions_d, positions_b, positions_q, d_pos, b_pos, q_pos):
+def exec_movements(positions_d, positions_b, positions_aStar, positions_q, d_pos, b_pos, aStar_pos, q_pos):
     global tick_counter
     pygame.time.wait(500)
 
-    if tick_counter >= len(positions_d) and tick_counter >= len(positions_b) and tick_counter >= len(positions_q):
-        return False, d_pos, b_pos, q_pos
+    if tick_counter >= len(positions_d) and tick_counter >= len(positions_b) and tick_counter >= len(positions_q) and tick_counter >= len(positions_aStar):
+        return False, d_pos, b_pos, aStar_pos, q_pos
 
     if tick_counter < len(positions_d):
         d_pos = move_player_key(positions_d[tick_counter], d_pos)
     if tick_counter < len(positions_b):
         b_pos = move_player_key(positions_b[tick_counter], b_pos)
+    if tick_counter < len(positions_aStar):
+        aStar_pos = move_player_key(positions_aStar[tick_counter], aStar_pos)
     if tick_counter < len(positions_q):
         q_pos = move_player_key(positions_q[tick_counter], q_pos)
     tick_counter = tick_counter + 1
-    return True, d_pos, b_pos, q_pos
+    return True, d_pos, b_pos, aStar_pos, q_pos
 
 
 def init_game(player_pos, algs):
-    global started, saved_squares, d_pos, b_pos, q_pos
+    global started, saved_squares, d_pos, b_pos, q_pos, aStar_pos
     started = True
     saved_squares = squares
     if "d" in algs:
@@ -323,7 +416,8 @@ def init_game(player_pos, algs):
         b_pos = player_pos
     if "q" in algs:
         q_pos = player_pos
-
+    if "aStar" in algs:
+        aStar_pos = player_pos
 
 def is_goal_state(player_pos):
     return squares[player_pos[0]][player_pos[1]] == "goal"
@@ -401,6 +495,7 @@ while True:
             x, y = pos[0]//square_size, pos[1]//square_size
             if event.button == 3:
                 squares[x][y] = "goal"
+                goal_pos = (x, y)
             elif squares[x][y] == "wall":
                 squares[x][y] = 0
             else:
@@ -416,6 +511,11 @@ while True:
             algs.append("d")
             init_game(player_pos, algs)
 
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+            positions_aStar = a_star_search(player_pos)
+            algs.append("aStar")
+            init_game(player_pos, algs)
+
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
             positions_q = Q_learning(player_pos)
             algs.append("q")
@@ -424,10 +524,12 @@ while True:
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_a:
             positions_d = depth_first_search(player_pos)
             positions_b = bredth_first_search(player_pos)
+            positions_aStar = a_star_search(player_pos)
             positions_q = Q_learning(player_pos)
             algs.append("b")
             algs.append("d")
             algs.append("q")
+            algs.append("aStar")
             init_game(player_pos, algs)
 
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_r and event.mod & pygame.KMOD_LSHIFT:
@@ -452,16 +554,17 @@ while True:
         squares[x][y] = "wall"
 
     if started:
-        started, new_d_pos, new_b_pos, new_q_pos = exec_movements(positions_d, positions_b, positions_q, d_pos, b_pos, q_pos)
+        started, new_d_pos, new_b_pos, new_q_pos, new_aStar_pos = exec_movements(positions_d, positions_b, positions_q, positions_aStar, d_pos, b_pos, q_pos, aStar_pos)
         if "d" in algs:
             d_pos = new_d_pos
         if "b" in algs:
             b_pos = new_b_pos
+        if "aStar" in algs:
+            aStar_pos = new_aStar_pos
         if "q" in algs:
             q_pos = new_q_pos
             
-
-    if (is_goal_state(d_pos) and "d" in algs) and (is_goal_state(b_pos) and "b" in algs) and (is_goal_state(q_pos) and "q" in algs):
+    if (is_goal_state(d_pos) and "d" in algs) and (is_goal_state(b_pos) and "b" in algs) and (is_goal_state(q_pos) and "q" in algs) and (is_goal_state(aStar_pos) and "aStar" in algs):
         restart_game()
 
     screen.fill(white)
@@ -483,14 +586,18 @@ while True:
                 color = yellow
             elif (x, y) == q_pos and "q" in algs:
                 color = orange
+            elif (x, y) == aStar_pos and "aStar" in algs:
+                color = brown
             pygame.draw.rect(screen, color, (col, row, square_size-1, square_size-1))
 
     text1 = font.render('Depth First Search (d)', True, purple)
     text2 = font.render('Breadth First Search (b)', True, yellow)
     text3 = font.render('Q-Learning (q)', True, orange)
+    text4 = font.render('A Star Search(*)', True, brown)
 
-    screen.blit(text1, (0, height +  (menu_height // 2)))
-    screen.blit(text2, (300, height + (menu_height // 2)))
-    screen.blit(text3, (600, height + (menu_height // 2)))
+    screen.blit(text1, (0, height + 10))
+    screen.blit(text2, (300, height + 10))
+    screen.blit(text3, (0, height + 50))
+    screen.blit(text4, (300, height + 50))
 
     pygame.display.flip()

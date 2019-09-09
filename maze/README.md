@@ -22,8 +22,15 @@ May require pip3 upgrade:
 	+ 'Space' to toggle wall drawing mode
 	+ 'd' to perform a depth-first-search
 	+ 'b' to perform a bredth-first-search
+	+ 's' to perfomr an A* search (using manhattan distance as an heuristic)
 	+ 'q' To perform train a Q-Learning model and then apply this model
 	+ 'a' to perform all algorithms
 	+ 'r' to restart game (keep blocks)
 	+ 'R' to restart all
 	+ 'g' to auto generate maze (using Prim's algorithm)
+
+4. Images
+
+![Four different paths setup](./images/4_different_paths_setup.png)
+
+![Four different paths execution](./images/4_different_paths_exec.png)
