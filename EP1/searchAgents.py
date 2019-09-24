@@ -133,6 +133,7 @@ class SearchAgent(Agent):
         else:
             return Directions.STOP
 
+saved_game_state = None
 class PositionSearchProblem(search.SearchProblem):
     """
     A search problem defines the state space, start state, goal test, successor
@@ -152,6 +153,10 @@ class PositionSearchProblem(search.SearchProblem):
         costFn: A function from a search state (tuple) to a non-negative number
         goal: A position in the gameState
         """
+        global saved_game_state
+        if saved_game_state == None:
+            saved_game_state = gameState
+        
         self.walls = gameState.getWalls()
         self.startState = gameState.getPacmanPosition()
         if start != None: self.startState = start

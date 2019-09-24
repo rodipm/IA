@@ -18,6 +18,8 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
+import searchAgents
+import pacman
 
 class SearchProblem:
     """
@@ -128,7 +130,7 @@ def breadthFirstSearch(problem):
         visitedStates.append(currentState)
 
         if problem.isGoalState(currentState):
-          print actions
+          # print actions
           return actions
         
         successors = problem.getSuccessors(currentState)
@@ -171,6 +173,13 @@ def nullHeuristic(state, problem=None):
     goal in the provided SearchProblem.  This heuristic is trivial.
     """
     return 0
+
+def optimalHeuristic(state, problem=None):
+  new_gamestate = searchAgents.saved_game_state
+  new_problem = searchAgents.PositionSearchProblem(new_gamestate, start=state, visualize=False)
+  actions = breadthFirstSearch(new_problem)
+  cost = new_problem.getCostOfActions(actions)
+  return cost
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
